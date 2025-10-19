@@ -90,3 +90,13 @@ for col in num:
     df=df[(df[col]>=Low) & (df[col]<=Upp)]
 Female=df[df['Gender']=='Female']
 Male=df[df['Gender']=='Male']
+plt.figure(figsize=(25,10))
+g= sns.catplot(kind='bar', data=Female, x='Years_Exper', y='Salary', hue='Education Level', col='Salary_Categ')
+g.set_xticklabels(rotation=45,fontsize=15)
+plt.suptitle("Female Variables Relationships", fontsize=25, color='red', weight='bold', y=1.10) 
+plt.show();
+plt.figure(figsize=(25,10))
+g= sns.catplot(kind='bar', data=Male, x='Years_Exper', y='Salary', hue='Education Level', col='Salary_Categ')
+g.set_xticklabels(rotation=45, fontsize=15)
+plt.suptitle("Male Variables Relationships", fontsize=25, color='red', weight='bold', y=1.10) 
+plt.show();
