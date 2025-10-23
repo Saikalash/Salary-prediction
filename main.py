@@ -100,3 +100,105 @@ g= sns.catplot(kind='bar', data=Male, x='Years_Exper', y='Salary', hue='Educatio
 g.set_xticklabels(rotation=45, fontsize=15)
 plt.suptitle("Male Variables Relationships", fontsize=25, color='red', weight='bold', y=1.10) 
 plt.show();
+plt.figure(figsize=(20,8))
+for ind, col in enumerate(num[:2]):
+    top_num=df[col].value_counts().index[:10]
+    ft=df[df[col].isin(top_num)]
+    plt.subplot(1,2,1+ind)
+    ax=sns.barplot(data=ft, x=col, y='Salary', hue='Gender', estimator=np.mean)
+    plt.tight_layout()
+plt.suptitle('Top Frequent Numeric Values vs Average Salary', y=1.03, weight='bold', fontsize=20, color='red')    
+plt.show();
+plt.figure(figsize=(20,8))
+for ind, col in enumerate(num[:2]):
+    top_num=df[col].value_counts().index[-10:]
+    ft=df[df[col].isin(top_num)]
+    plt.subplot(1,2,1+ind)
+    sns.barplot(data=ft, x=col, y='Salary', hue='Gender', estimator=np.mean)
+    plt.xticks(rotation=45, size=12)
+    plt.tight_layout()
+plt.suptitle('Least Frequent Numeric Values vs Average Salary', y=1.03, weight='bold', fontsize=20, color='red')    
+plt.show();
+plt.figure(figsize=(20,8))
+sns.pairplot(df[['Age', 'Years of Experience', 'Salary']], kind='reg')
+plt.tight_layout();
+corr=df.corr(numeric_only=True)
+sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f')
+dm=df[['Age', 'Gender', 'Education Level', 'Job Title', 'Years of Experience', 'Salary',]]
+dm=pd.get_dummies(dm, columns=['Gender', 'Education Level'], drop_first=True, dtype=int)
+la=LabelEncoder()
+dm['Job_Title_encd']=la.fit_transform(dm['Job Title'])
+
+
+job_mapping={'Job Title': la.classes_.tolist()}
+
+
+with open('job_mapping.json', 'w') as f:
+    json.dump(job_mapping, f, indent=4)
+dm.head(4)
+dm.columns
+x = dm[['Age', 'Years of Experience', 'Gender_Male', 'Gender_Other', 'Education Level_High School', 'Education Level_Master',
+       'Education Level_PhD', 'Job_Title_encd']]
+y = dm['Salary']
+
+model = sm.OLS(y, x).fit()  
+model.summary()
+jop_mapping=(dict(zip(range(len(la.classes_)), la.classes_)))
+jop_mapping
+model.model.exog_names
+new_data=pd.DataFrame([{'Age': 39, 'Years of Experience': 5, 'Gender_Male': 1, 'Gender_Other':0,
+       'Education Level_High School':0, 'Education Level_Master':1, 'Education Level_PhD':0, 'Job_Title_encd':20}]) 
+prediction=model.predict(new_data)
+print(f'Predicted Salery= ${prediction[0]:,.2f}')
+y_true = dm['Salary']
+y_pred = model.predict(dm[x.columns]) 
+
+# compare first 10 columns between predicted salary and actual salary
+print(pd.DataFrame({'Actual': y_true, 'Predicted': y_pred}).head(10))
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+# the measurement of accuracy 
+print(f"\nMean Absolute Error: {mean_absolute_error(y_true, y_pred):.2f}")
+print(f"Mean Square Error: {mean_squared_error(y_true, y_pred, squared=False):.2f}")
+print(f"Mean Absolute Percantage Error: {np.mean(np.abs((y_true - y_pred) / y_true)) * 100:.2f} %\n")
+X = dm[['Age', 'Years of Experience', 'Gender_Male', 'Gender_Other', 'Education Level_High School', 'Education Level_Master',
+       'Education Level_PhD', 'Job_Title_encd']]
+y = dm['Salary']
+X_train, X_test, y_train, y_test=train_test_split(X,y,test_size=0.33, random_state=42)
+models={"Linear Regression":LinearRegression(),"Random Forest":RandomForestRegressor(),"Gradient Boosting":GradientBoostingRegressor(),"Decision Tree":DecisionTreeRegressor(),"KNN":KNeighborsRegressor()}
+results={}
+best_cv=-1
+best_name=None
+best_estimator=None
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_predict= model.predict(X_test)
+    r2=r2_score(y_test, y_predict)
+    mse=mean_squared_error(y_test, y_predict)
+    cv_scores=cross_val_score(model, X,y, cv=5, scoring='r2')
+    mean_cv=np.mean(cv_scores)
+    results[name]=mean_cv
+    print(f'\n-----------{name}------------------')
+    print(f'R2: {r2:.2f}')
+    print(f'MSE: {mse:.2f}')
+    print(f'CVS: {cv_scores}')
+    print(f'Mean CV: {mean_cv:.2f}')
+    if mean_cv>best_cv:
+        best_cv=mean_cv
+        best_name=name
+        best_estimator=model
+
+final_model=best_estimator
+print(f'\n Best Model is: {best_name}, CV: {best_cv:.2f}')
+
+joblib.dump(final_model, 'salary_predict.pkl')
+print(f'\n Best Model Saved as "salary.predict.pkl"')
+sk_model=joblib.load('salary_predict.pkl')
+sk_model
+job_mapping=dict(zip(range(len(la.classes_)), la.classes_))
+job_mapping
+sk_new_data=pd.DataFrame([{'Age': 39, 'Years of Experience': 5, 'Gender_Male': 1, 'Gender_Other':0,
+       'Education Level_High School':0, 'Education Level_Master':1, 'Education Level_PhD':0, 'Job_Title_encd':20}]) 
+prediction=model.predict(sk_new_data)
+print(f'Predicted Salery= $ {prediction[0]:,.2f}')
+
